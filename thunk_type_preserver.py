@@ -48,37 +48,26 @@ class HexRaysHooks(ida_hexrays.Hexrays_Hooks):
 		
 		return 0
 
-class UIHooks(idaapi.UI_Hooks):
-	parent = None
-
-	def __init__(self, parent):
-		super().__init__()
-		self.parent = parent
-
-	def ready_to_run(self):
-		self.parent.hexrays_init()
-
 class ThunkTypePreserver(idaapi.plugin_t):
 	flags = 0
 	comment = 'Thunk Type Preserver'
 	help = 'Preserves thunk guessed type information'
 	wanted_name = 'Thunk Type Preserver'
 
-	ui_hooks = None
 	thunk_hook = None
 
 	def init(self):
 		if 'ELF64' not in idaapi.get_file_type_name():
 			return idaapi.PLUGIN_SKIP
 
-		self.ui_hooks = UIHooks(self)
-		self.ui_hooks.hook()
+		if not ida_hexrays.init_hexrays_plugin():
+			print('Failed to initialize plugin, missing hexrays decompiler.')
+			return idaapi.PLUGIN_SKIP
 
-		return idaapi.PLUGIN_KEEP
-
-	def hexrays_init(self):
 		self.thunk_hook = HexRaysHooks()
 		self.thunk_hook.hook()
+
+		return idaapi.PLUGIN_KEEP
 
 	def run(self, arg):
 		pass
@@ -86,9 +75,6 @@ class ThunkTypePreserver(idaapi.plugin_t):
 	def term(self):
 		if self.thunk_hook is not None:
 			self.thunk_hook.unhook()
-
-		if self.ui_hooks is not None:
-			self.ui_hooks.unhook()
 
 
 def PLUGIN_ENTRY():
